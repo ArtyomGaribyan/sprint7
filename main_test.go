@@ -28,9 +28,9 @@ func TestCafeNegative(t *testing.T) {
 		req := httptest.NewRequest("GET", v.request, nil)
 		handler.ServeHTTP(response, req)
 
+		require.Equal(t, http.StatusBadRequest, response.Code)
 		assert.Equal(t, v.status, response.Code)
 		assert.Equal(t, v.message, strings.TrimSpace(response.Body.String()))
-		require.Equal(t, http.StatusBadRequest, response.Code)
 	}
 }
 
@@ -48,7 +48,6 @@ func TestCafeWhenOk(t *testing.T) {
 
 		handler.ServeHTTP(response, req)
 
-		assert.Equal(t, http.StatusOK, response.Code)
 		require.Equal(t, http.StatusOK, response.Code)
 	}
 }
@@ -56,6 +55,8 @@ func TestCafeWhenOk(t *testing.T) {
 func TestCafeCount(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 
+	// Здесь только тестируемые значения count
+	// Ожидаемые значения вычисляются автоматически в процессе проверки
 	requests := []int{0, 1, 2, 100}
 
 	for _, v := range requests {
@@ -66,22 +67,24 @@ func TestCafeCount(t *testing.T) {
 
 		handler.ServeHTTP(response, req)
 
+		require.Equal(t, http.StatusOK, response.Code)
+
 		cafes := strings.Split(strings.TrimSpace(response.Body.String()), ",")
 		if cafes[0] == "" {
 			cafes = []string{}
 		}
-		if v <= len(cafeList[c]) {
-			assert.Equal(t, v, len(cafes))
-		} else {
-			assert.Equal(t, len(cafeList[c]), len(cafes))
-		}
-		require.Equal(t, http.StatusOK, response.Code)
+
+		// Ожидаемые значения вычисляются автоматически
+		assert.Len(t, cafes, min(v, len(cafeList[c])))
 	}
 }
 
 func TestCafeSearch(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 
+	// Здесь только тестируемые значения search
+	// Ожидаемые значения вычисляются автоматически и 
+	// подставляются сразу после объявления структуры с помощью цикла for
 	requests := []struct{
 		search string
 		wantCount int
@@ -91,6 +94,7 @@ func TestCafeSearch(t *testing.T) {
 		{search: "вилка"},
 	}
 
+	// Здесь вычисляются и подставляются ожидаемые значения
 	for i, s := range requests {
 		for _, c := range cafeList["moscow"] {
 			if strings.Contains(strings.ToLower(c), strings.ToLower(s.search)) {
@@ -99,19 +103,19 @@ func TestCafeSearch(t *testing.T) {
 		}
 	}
 
-	fmt.Println(requests)
-
+	// Здесь уже запускаются проверки
 	for _, s := range requests {
 		response := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", fmt.Sprintf("/cafe?city=moscow&search=%s", s.search), nil)
 
 		handler.ServeHTTP(response, req)
+		
+		require.Equal(t, http.StatusOK, response.Code)
 
 		cafes := strings.Split(strings.TrimSpace(response.Body.String()), ",")
 		if cafes[0] == "" {
 			cafes = []string{}
 		}
-		assert.Equal(t, s.wantCount, len(cafes))
-		require.Equal(t, http.StatusOK, response.Code)
+		assert.Len(t, cafes, s.wantCount)
 	}
 }
