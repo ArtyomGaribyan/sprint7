@@ -55,15 +55,19 @@ func TestCafeWhenOk(t *testing.T) {
 func TestCafeCount(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 
-	// Здесь только тестируемые значения count
-	// Ожидаемые значения вычисляются автоматически в процессе проверки
-	requests := []int{0, 1, 2, 100}
+	requests := []struct{
+		count, want int
+	}{
+		{0, 0},
+		{1, 1},
+		{2, 2},
+		{100, 100},
+	}
+	c :="moscow"
 
 	for _, v := range requests {
-		c :="moscow"
-
 		response := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", fmt.Sprintf("/cafe?count=%d&city=%s", v, c), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/cafe?count=%d&city=%s", v.count, c), nil)
 
 		handler.ServeHTTP(response, req)
 
@@ -74,39 +78,25 @@ func TestCafeCount(t *testing.T) {
 			cafes = []string{}
 		}
 
-		// Ожидаемые значения вычисляются автоматически
-		assert.Len(t, cafes, min(v, len(cafeList[c])))
+		assert.Len(t, cafes, min(v.want, len(cafeList[c])))
 	}
 }
 
 func TestCafeSearch(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 
-	// Здесь только тестируемые значения search
-	// Ожидаемые значения вычисляются автоматически и 
-	// подставляются сразу после объявления структуры с помощью цикла for
 	requests := []struct{
 		search string
 		wantCount int
 	}{
-		{search: "фасоль"},
-		{search: "кофе"},
-		{search: "вилка"},
+		{"фасоль", 0},
+		{"кофе", 2},
+		{"вилка", 1},
 	}
 
-	// Здесь вычисляются и подставляются ожидаемые значения
-	for i, s := range requests {
-		for _, c := range cafeList["moscow"] {
-			if strings.Contains(strings.ToLower(c), strings.ToLower(s.search)) {
-				requests[i].wantCount++
-			}
-		}
-	}
-
-	// Здесь уже запускаются проверки
-	for _, s := range requests {
+	for _, v := range requests {
 		response := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", fmt.Sprintf("/cafe?city=moscow&search=%s", s.search), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/cafe?city=moscow&search=%s", v.search), nil)
 
 		handler.ServeHTTP(response, req)
 		
@@ -116,6 +106,10 @@ func TestCafeSearch(t *testing.T) {
 		if cafes[0] == "" {
 			cafes = []string{}
 		}
-		assert.Len(t, cafes, s.wantCount)
+		assert.Len(t, cafes, v.wantCount)
+		
+		for _, cafe := range cafes {
+			assert.Contains(t, strings.ToLower(cafe), v.search)
+		}
 	}
 }
